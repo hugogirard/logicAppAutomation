@@ -61,6 +61,7 @@ module serverFarm 'br/public:avm/res/web/serverfarm:0.4.1' = {
   scope: rg
   params: {
     name: 'asp-${suffix}'
+    maximumElasticWorkerCount: 20
     skuName: 'WS1'
   }
 }
