@@ -1,4 +1,4 @@
-name: Create Azure resources
+name: Create Azure resource
 
 on:
   workflow_dispatch:
