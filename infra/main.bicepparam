@@ -11,3 +11,7 @@ param subnetName = 'snet-vms'
 param virtualNetworkAddressPrefix = '172.16.0.0/16'
 
 param virtualNetworkName = 'vnet-logic-app'
+
+param adminPassword = ''
+
+param adminUsername = ''

@@ -1,0 +1,40 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "actions": {
+            "Run_query_and_list_results": {
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "referenceName": "azuremonitorlogs-1"
+                        }
+                    },
+                    "method": "post",
+                    "body": "arg(\"\").resources\n| where type contains \"microsoft.compute/virtualmachines\"\n| project id, name, subscriptionId, resourceGroup, owner = tostring(tags[\"owner\"]), contact = tostring(tags[\"contact\"])",
+                    "path": "/queryData",
+                    "queries": {
+                        "subscriptions": "6e37307e-394c-478a-8404-4e441b3dfc1d",
+                        "resourcegroups": "rg-logic-app-automation",
+                        "resourcetype": "Log Analytics Workspace",
+                        "resourcename": "log-ywfzj3z4jl75g",
+                        "timerange": "Last 24 hours"
+                    }
+                },
+                "runAfter": {}
+            }
+        },
+        "outputs": {},
+        "triggers": {
+            "When_a_HTTP_request_is_received": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "method": "POST"
+                }
+            }
+        }
+    },
+    "kind": "Stateful"
+}

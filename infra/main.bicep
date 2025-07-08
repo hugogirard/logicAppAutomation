@@ -18,15 +18,35 @@ param subnetName string
 @description('The address prefix of the subnet that will contain the VM')
 param subnetAddressPrefix string
 
+@description('The admin username')
+@secure()
+param adminUsername string
+
+@description('The admin password')
+@secure()
+param adminPassword string
+
 resource rg 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   name: resourceGroupName
   location: location
 }
 
-var vmsName = [
-  'webserver'
-  'databaseserver'
-  'middlewareserver'
+var vmsSettings = [
+  {
+    computerName: 'webserver'
+    owner: '__owner__'
+    contact: '__contact__'
+  }
+  {
+    computerName: 'databaseserver'
+    owner: '__owner__'
+    contact: '__contact__'
+  }
+  {
+    computerName: 'middlewareserver'
+    owner: '__owner__'
+    contact: '__contact__'
+  }
 ]
 
 /*
@@ -98,65 +118,111 @@ module serverFarm 'br/public:avm/res/web/serverfarm:0.4.1' = {
   }
 }
 
-module logicapp 'br/public:avm/res/web/site:0.16.0' = {
-  scope: rg
-  params: {
-    name: 'logic-${suffix}'
-    location: location
-    kind: 'functionapp,workflowapp'
-    serverFarmResourceId: serverFarm.outputs.resourceId
-    siteConfig: {
-      appSettings: [
+// module logicapp 'br/public:avm/res/web/site:0.16.0' = {
+//   scope: rg
+//   params: {
+//     name: 'logic-${suffix}'
+//     location: location
+//     kind: 'functionapp,workflowapp'
+//     serverFarmResourceId: serverFarm.outputs.resourceId
+//     siteConfig: {
+//       appSettings: [
+//         {
+//           name: 'FUNCTIONS_EXTENSION_VERSION'
+//           value: '~4'
+//         }
+//         {
+//           name: 'FUNCTIONS_WORKER_RUNTIME'
+//           value: 'dotnet'
+//         }
+//         {
+//           name: 'WEBSITE_NODE_DEFAULT_VERSION'
+//           value: '~20'
+//         }
+//         {
+//           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+//           value: appinsights.outputs.connectionString
+//         }
+//         {
+//           name: 'AzureWebJobsStorage'
+//           value: 'DefaultEndpointsProtocol=https;AccountName=${storage.outputs.name};AccountKey=${storage.outputs.primaryAccessKey};EndpointSuffix=core.windows.net'
+//         }
+//         {
+//           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+//           value: 'DefaultEndpointsProtocol=https;AccountName=${storage.outputs.name};AccountKey=${storage.outputs.primaryAccessKey};EndpointSuffix=core.windows.net'
+//         }
+//         {
+//           name: 'WEBSITE_CONTENTSHARE'
+//           value: replace(suffix, '-', '')
+//         }
+//         {
+//           name: 'AzureFunctionsJobHost__extensionBundle__id'
+//           value: 'Microsoft.Azure.Functions.ExtensionBundle.Workflows'
+//         }
+//         {
+//           name: 'AzureFunctionsJobHost__extensionBundle__version'
+//           value: '[1.*, 2.0.0)'
+//         }
+//         {
+//           name: 'APP_KIND'
+//           value: 'workflowApp'
+//         }
+//         {
+//           name: 'FUNCTIONS_INPROC_NET8_ENABLED'
+//           value: '1'
+//         }
+//       ]
+//       use32BitWorkerProcess: false
+//       ftpsState: 'FtpsOnly'
+//       netFrameworkVersion: 'v6.0'
+//     }
+//   }
+// }
+
+module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.15.1' = [
+  for setting in vmsSettings: {
+    scope: rg
+    params: {
+      // Required parameters
+      adminUsername: adminUsername
+      imageReference: {
+        offer: '0001-com-ubuntu-server-jammy'
+        publisher: 'Canonical'
+        sku: '22_04-lts-gen2'
+        version: 'latest'
+      }
+      tags: {
+        owner: setting.owner
+        contact: setting.contact
+      }
+      name: setting.computerName
+      nicConfigurations: [
         {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'dotnet'
-        }
-        {
-          name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~20'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appinsights.outputs.connectionString
-        }
-        {
-          name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.outputs.name};AccountKey=${storage.outputs.primaryAccessKey};EndpointSuffix=core.windows.net'
-        }
-        {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.outputs.name};AccountKey=${storage.outputs.primaryAccessKey};EndpointSuffix=core.windows.net'
-        }
-        {
-          name: 'WEBSITE_CONTENTSHARE'
-          value: replace(suffix, '-', '')
-        }
-        {
-          name: 'AzureFunctionsJobHost__extensionBundle__id'
-          value: 'Microsoft.Azure.Functions.ExtensionBundle.Workflows'
-        }
-        {
-          name: 'AzureFunctionsJobHost__extensionBundle__version'
-          value: '[1.*, 2.0.0)'
-        }
-        {
-          name: 'APP_KIND'
-          value: 'workflowApp'
-        }
-        {
-          name: 'FUNCTIONS_INPROC_NET8_ENABLED'
-          value: '1'
+          ipConfigurations: [
+            {
+              name: '${setting.computerName}-ipconfig'
+              subnetResourceId: virtualNetwork.outputs.subnetResourceIds[0]
+            }
+          ]
+          nicSuffix: '-nic-01'
         }
       ]
-      use32BitWorkerProcess: false
-      ftpsState: 'FtpsOnly'
-      netFrameworkVersion: 'v6.0'
+      osDisk: {
+        caching: 'ReadWrite'
+        diskSizeGB: 128
+        managedDisk: {
+          storageAccountType: 'Premium_LRS'
+        }
+      }
+      osType: 'Linux'
+      vmSize: 'Standard_D2s_v3'
+      zone: 0
+      // Non-required parameters
+      disablePasswordAuthentication: false
+      adminPassword: adminPassword
+      location: location
     }
   }
-}
+]
 
 output resourceGroupName string = rg.name

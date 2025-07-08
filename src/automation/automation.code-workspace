@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "name": "SendVMNotification",
+      "path": "./SendVMNotification"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.env.windows": {
+      "PATH": "C:\\Users\\hugirard\\.azurelogicapps\\dependencies\\DotNetSDK;${env:PATH}"
+    },
+    "omnisharp.dotNetCliPaths": [
+      "C:\\Users\\hugirard\\.azurelogicapps\\dependencies\\DotNetSDK"
+    ]
+  }
+}

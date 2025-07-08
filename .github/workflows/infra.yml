@@ -33,8 +33,7 @@ jobs:
           deploymentName: ${{ github.run_id }}
           template: ./infra/main.bicep
           failOnStdErr: false
-          parameters: ./infra/main.bicepparam 
-          #adminPassword=${{ secrets.VM_PASSWORD }} adminUserName=${{ secrets.VM_ADMIN }}
+          parameters: ./infra/main.bicepparam adminPassword=${{ secrets.VM_PASSWORD }} adminUsername=${{ secrets.VM_ADMIN }}
 
       - uses: gliech/create-github-secret-action@v1
         with:
