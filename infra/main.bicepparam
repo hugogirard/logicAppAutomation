@@ -15,3 +15,7 @@ param virtualNetworkName = 'vnet-logic-app'
 param adminPassword = ''
 
 param adminUsername = ''
+
+param owner = ''
+
+param contact = ''

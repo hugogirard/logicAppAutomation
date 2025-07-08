@@ -26,6 +26,12 @@ param adminUsername string
 @secure()
 param adminPassword string
 
+@description('The value of the owner tag')
+param owner string
+
+@description('The value of the contact tag')
+param contact string
+
 resource rg 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   name: resourceGroupName
   location: location
@@ -34,18 +40,12 @@ resource rg 'Microsoft.Resources/resourceGroups@2025-04-01' = {
 var vmsSettings = [
   {
     computerName: 'webserver'
-    owner: '__owner__'
-    contact: '__contact__'
   }
   {
     computerName: 'databaseserver'
-    owner: '__owner__'
-    contact: '__contact__'
   }
   {
     computerName: 'middlewareserver'
-    owner: '__owner__'
-    contact: '__contact__'
   }
 ]
 
@@ -192,8 +192,8 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.15.1' = [
         version: 'latest'
       }
       tags: {
-        owner: setting.owner
-        contact: setting.contact
+        owner: owner
+        contact: contact
       }
       name: setting.computerName
       nicConfigurations: [
