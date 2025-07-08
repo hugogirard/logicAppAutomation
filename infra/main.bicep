@@ -23,6 +23,12 @@ resource rg 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   location: location
 }
 
+var vmsName = [
+  'webserver'
+  'databaseserver'
+  'middlewareserver'
+]
+
 /*
    Create the network that will hold the VMs
 */
@@ -118,11 +124,11 @@ module logicapp 'br/public:avm/res/web/site:0.16.0' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: storage.outputs.primaryConnectionString
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.outputs.name};AccountKey=${storage.outputs.primaryAccessKey};EndpointSuffix=core.windows.net'
         }
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storage.outputs.primaryConnectionString
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.outputs.name};AccountKey=${storage.outputs.primaryAccessKey};EndpointSuffix=core.windows.net'
         }
         {
           name: 'WEBSITE_CONTENTSHARE'
