@@ -1,0 +1,43 @@
+name: Create Azure resources
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-azure-resources:
+    env:
+      REGION: "canadacentral"
+      AZURE_CORE_OUTPUT: "none"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: Azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Temp fix
+      - name: bicep tmp fix
+        run: az config set bicep.use_binary_from_path=false
+
+      - name: deploy
+        id: createResources
+        uses: azure/arm-deploy@v2
+        with:
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION }}
+          scope: subscription
+          region: ${{ env.REGION }}
+          deploymentName: ${{ github.run_id }}
+          template: ./infra/main.bicep
+          failOnStdErr: false
+          parameters: ./infra/main.bicepparam 
+          #adminPassword=${{ secrets.VM_PASSWORD }} adminUserName=${{ secrets.VM_ADMIN }}
+
+      - uses: gliech/create-github-secret-action@v1
+        with:
+          name: RESOURCE_GROUP_NAME
+          value: ${{ steps.createResources.outputs.resourceGroupName }}
+          pa_token: ${{ secrets.PA_TOKEN }}
