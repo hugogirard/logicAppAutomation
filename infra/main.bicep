@@ -57,12 +57,98 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.7.0' = {
 */
 var suffix = uniqueString(rg.id)
 
+module storage 'br/public:avm/res/storage/storage-account:0.25.0' = {
+  scope: rg
+  params: {
+    name: 'str${replace(suffix,'-','')}'
+    location: location
+    kind: 'StorageV2'
+    allowSharedKeyAccess: true
+  }
+}
+
+module logworkspace 'br/public:avm/res/operational-insights/workspace:0.12.0' = {
+  scope: rg
+  params: {
+    name: 'log-${suffix}'
+  }
+}
+
+module appinsights 'br/public:avm/res/insights/component:0.6.0' = {
+  scope: rg
+  params: {
+    name: 'appi-${suffix}'
+    workspaceResourceId: logworkspace.outputs.resourceId
+  }
+}
+
 module serverFarm 'br/public:avm/res/web/serverfarm:0.4.1' = {
   scope: rg
   params: {
     name: 'asp-${suffix}'
     maximumElasticWorkerCount: 20
     skuName: 'WS1'
+  }
+}
+
+module logicapp 'br/public:avm/res/web/site:0.16.0' = {
+  scope: rg
+  params: {
+    name: 'logic-${suffix}'
+    location: location
+    kind: 'functionapp,workflowapp'
+    serverFarmResourceId: serverFarm.outputs.resourceId
+    siteConfig: {
+      appSettings: [
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet'
+        }
+        {
+          name: 'WEBSITE_NODE_DEFAULT_VERSION'
+          value: '~20'
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appinsights.outputs.connectionString
+        }
+        {
+          name: 'AzureWebJobsStorage'
+          value: storage.outputs.primaryConnectionString
+        }
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: storage.outputs.primaryConnectionString
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: replace(suffix, '-', '')
+        }
+        {
+          name: 'AzureFunctionsJobHost__extensionBundle__id'
+          value: 'Microsoft.Azure.Functions.ExtensionBundle.Workflows'
+        }
+        {
+          name: 'AzureFunctionsJobHost__extensionBundle__version'
+          value: '[1.*, 2.0.0)'
+        }
+        {
+          name: 'APP_KIND'
+          value: 'workflowApp'
+        }
+        {
+          name: 'FUNCTIONS_INPROC_NET8_ENABLED'
+          value: '1'
+        }
+      ]
+      use32BitWorkerProcess: false
+      ftpsState: 'FtpsOnly'
+      netFrameworkVersion: 'v6.0'
+    }
   }
 }
 
