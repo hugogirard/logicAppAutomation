@@ -70,6 +70,7 @@ module storage 'br/public:avm/res/storage/storage-account:0.25.0' = {
     location: location
     kind: 'StorageV2'
     allowSharedKeyAccess: true
+    publicNetworkAccess: 'Enabled'
   }
 }
 
