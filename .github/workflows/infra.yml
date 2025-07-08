@@ -23,6 +23,14 @@ jobs:
       - name: bicep tmp fix
         run: az config set bicep.use_binary_from_path=false
 
+      - uses: cschleiden/replace-tokens@v1
+        name: Replace token
+        with:
+          files: '["**/main.bicep"]'
+        env:
+          __owner__: ${{ secrets.OWNER }}
+          __contact__: ${{ secrets.OWNER_EMAIL }}
+
       - name: deploy
         id: createResources
         uses: azure/arm-deploy@v2
