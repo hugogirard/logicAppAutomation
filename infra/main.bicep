@@ -217,7 +217,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.15.1' = [
       osType: 'Linux'
       vmSize: 'Standard_D2s_v3'
       zone: 0
-      // Non-required parameters
+      encryptionAtHost: false
       disablePasswordAuthentication: false
       adminPassword: adminPassword
       location: location
