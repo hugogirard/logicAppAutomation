@@ -2,40 +2,68 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "generateDebugSymbols",
-			"command": "${config:azureLogicAppsStandard.dotnetBinaryPath}",
+			"label": "clean (functions)",
+			"command": "dotnet",
 			"args": [
-				"${input:getDebugSymbolDll}"
+				"clean",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
 			],
 			"type": "process",
 			"problemMatcher": "$msCompile"
 		},
 		{
-			"type": "shell",
-			"command": "${config:azureLogicAppsStandard.funcCoreToolsBinaryPath}",
+			"label": "build (functions)",
+			"command": "dotnet",
 			"args": [
-				"host",
-				"start"
+				"build",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
 			],
-			"options": {
-				"env": {
-					"PATH": "${config:azureLogicAppsStandard.autoRuntimeDependenciesPath}\\NodeJs;${config:azureLogicAppsStandard.autoRuntimeDependenciesPath}\\DotNetSDK;$env:PATH"
-				}
-			},
-			"problemMatcher": "$func-watch",
-			"isBackground": true,
-			"label": "func: host start",
+			"type": "process",
+			"dependsOn": "clean (functions)",
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			}
-		}
-	],
-	"inputs": [
+			},
+			"problemMatcher": "$msCompile"
+		},
 		{
-			"id": "getDebugSymbolDll",
-			"type": "command",
-			"command": "azureLogicAppsStandard.getDebugSymbolDll"
+			"label": "clean release (functions)",
+			"command": "dotnet",
+			"args": [
+				"clean",
+				"--configuration",
+				"Release",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"type": "process",
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "publish (functions)",
+			"command": "dotnet",
+			"args": [
+				"publish",
+				"--configuration",
+				"Release",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"type": "process",
+			"dependsOn": "clean release (functions)",
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"type": "func",
+			"dependsOn": "build (functions)",
+			"options": {
+				"cwd": "${workspaceFolder}/bin/Debug/net8.0"
+			},
+			"command": "host start",
+			"isBackground": true,
+			"problemMatcher": "$func-dotnet-watch"
 		}
 	]
 }

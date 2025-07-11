@@ -113,8 +113,30 @@ module serverFarm 'br/public:avm/res/web/serverfarm:0.4.1' = {
   scope: rg
   params: {
     name: 'asp-${suffix}'
-    maximumElasticWorkerCount: 20
-    skuName: 'WS1'
+    skuName: 'S1'
+  }
+}
+
+module function 'br/public:avm/res/web/site:0.16.0' = {
+  scope: rg
+  params: {
+    // Required parameters
+    kind: 'functionapp'
+    name: 'func-${suffix}'
+    serverFarmResourceId: serverFarm.outputs.resourceId
+    configs: [
+      {
+        name: 'appsettings'
+        applicationInsightResourceId: appinsights.outputs.resourceId
+        storageAccountResourceId: storage.outputs.resourceId
+        storageAccountUseIdentityAuthentication: true
+        properties: {
+          AzureFunctionsJobHost__logging__logLevel__default: 'Trace'
+          FUNCTIONS_EXTENSION_VERSION: '~4'
+          FUNCTIONS_WORKER_RUNTIME: 'dotnet'
+        }
+      }
+    ]
   }
 }
 

@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run/Debug logic app SendVMNotification",
+            "name": "Attach to .NET Functions",
             "type": "coreclr",
             "request": "attach",
-            "processId": "${command:azureLogicAppsStandard.pickProcess}"
+            "processId": "${command:azureFunctions.pickProcess}"
         }
     ]
 }
