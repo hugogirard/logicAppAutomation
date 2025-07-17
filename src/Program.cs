@@ -9,6 +9,7 @@ var builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
 
 builder.Services.AddSingleton<IGraphService, GraphService>();
+builder.Services.AddSingleton<IMonitoringService, MonitoringService>();
 
 builder.Services
     .AddApplicationInsightsTelemetryWorkerService()

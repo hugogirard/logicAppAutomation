@@ -8,20 +8,13 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Contoso.Application;
+using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribute;
 
 namespace Contoso;
 
-public class SendNotification
+public class SendNotification(ILogger<SendNotification> _logger, IGraphService _graphService, IMonitoringService _monitoringService)
 {
-    private readonly ILogger<SendNotification> _logger;
-    private readonly IGraphService _graphService;
-
-    public SendNotification(ILogger<SendNotification> logger, IGraphService graphService)
-    {
-        _logger = logger;
-        _graphService = graphService;
-    }
-
     [Function("GetVms")]
     [OpenApiOperation(operationId: "GetVms")]
     [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
@@ -51,7 +44,7 @@ public class SendNotification
     [Function("GetVmsRebootInfo")]
     [OpenApiOperation(operationId: "GetVmsRebootInfo")]
     [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
-    [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string),
+    [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(IEnumerable<VmInPendingState>),
             Description = "The OK response message containing the list of Vms.")]
     public async Task<IActionResult> GetVmsRebootInfo([HttpTrigger(AuthorizationLevel.Function, "get")] HttpRequest req)
     {
@@ -66,5 +59,42 @@ public class SendNotification
         return new OkObjectResult(vmsInfo);
     }
 
+    [Function("SendEmail")]
+    [OpenApiOperation(operationId: "SendEmail")]
+    [OpenApiRequestBody("application/json", typeof(EmailRequest))]
+    [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
+
+    public async Task<IActionResult> SendEmail([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req,
+                                                                                                  [FromBody] EmailRequest emailRequest)
+    {
+        try
+        {
+            await _graphService.SendEmail(emailRequest.message, emailRequest.from, emailRequest.to);
+
+            return new OkResult();
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex.Message, ex);
+            return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [Function("SendEmailVmsPendingStateNotification")]
+    [OpenApiOperation(operationId: "SendEmailVmsPendingStateNotification")]
+    [OpenApiSecurity("function_key", SecuritySchemeType.ApiKey, Name = "code", In = OpenApiSecurityLocationType.Query)]
+    public async Task<IActionResult> SendEmailVmsPendingStateNotification([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req)
+    {
+        try
+        {
+            await _monitoringService.SendEmailsVmPendingState();
+            return new OkResult();
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex.Message, ex);
+            return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+        }
+    }
 
 }

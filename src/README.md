@@ -1,3 +1,11 @@
-https://learn.microsoft.com/en-us/rest/api/loganalytics/query?view=rest-loganalytics-2022-10-27-preview
+# TimerTrigger - C<span>#</span>
 
-let MockVMInfo = datatable( SubscriptionId: string, Resource: string, Computer: string, ResourceId: string ) [ '6e37307e-394c-478a-8404-4e441b3dfc1d', 'webserver', 'webserver', '/subscriptions/6e37307e-394c-478a-8404-4e441b3dfc1d/resourceGroups/rg-func-notification/providers/Microsoft.Compute/virtualMachines/webserver', '6e37307e-394c-478a-8404-4e441b3dfc1d', 'databaseserver', 'databaseserver', '/subscriptions/6e37307e-394c-478a-8404-4e441b3dfc1d/resourceGroups/rg-func-notification/providers/Microsoft.Compute/virtualMachines/databaseserver', '6e37307e-394c-478a-8404-4e441b3dfc1d', 'middlewareserver', 'middlewareserver', '/subscriptions/6e37307e-394c-478a-8404-4e441b3dfc1d/resourceGroups/rg-func-notification/providers/Microsoft.Compute/virtualMachines/middlewareserver' ]; let MockPatchSummary = datatable( Computer: string, Computer1: string, LastUpdateApplied: datetime, OldestMissingSecurityUpdateInDays: int, WindowsUpdateSetting: string, OsVersion: string, CriticalUpdatesMissing: int, SecurityUpdatesMissing: int, OtherUpdatesMissing: int, TotalUpdatesMissing: int, RestartPending: bool ) [ 'webserver', 'webserver', datetime(2025-07-01 10:30:00), 5, 'Automatic', 'Windows Server 2022', 2, 3, 1, 6, true, 'databaseserver', 'databaseserver', datetime(2025-07-03 14:15:00), 3, 'Manual', 'Windows Server 2019', 1, 2, 0, 3, false, 'middlewareserver', 'middlewareserver', datetime(2025-07-05 09:45:00), 7, 'Automatic', 'Windows Server 2022', 0, 1, 2, 3, true ]; MockVMInfo | join kind=leftouter (MockPatchSummary) on Computer | project SubscriptionId, Resource, Computer, ResourceId, Computer1, LastUpdateApplied, OldestMissingSecurityUpdateInDays, WindowsUpdateSetting, OsVersion, CriticalUpdatesMissing, SecurityUpdatesMissing, OtherUpdatesMissing, TotalUpdatesMissing, RestartPending
+The `TimerTrigger` makes it incredibly easy to have your functions executed on a schedule. This sample demonstrates a simple use case of calling your function every 5 minutes.
+
+## How it works
+
+For a `TimerTrigger` to work, you provide a schedule in the form of a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression)(See the link for full details). A cron expression is a string with 6 separate expressions which represent a given schedule via patterns. The pattern we use to represent every 5 minutes is `0 */5 * * * *`. This, in plain text, means: "When seconds is equal to 0, minutes is divisible by 5, for any hour, day of the month, month, day of the week, or year".
+
+## Learn more
+
+<TODO> Documentation
