@@ -161,8 +161,8 @@ Set the application settings in your Function App:
 ⚠️ **IMPORTANT**: This is a hardcoded mock query for testing purposes only. It creates fake VM data and should NOT be used in production. Replace this with your actual Log Analytics query once testing is complete.
 
 🔧 **CRITICAL**: Before using this mock query, you **MUST** customize it with your actual Azure resources:
-1. Replace the subscription ID `f47ac10b-58cc-4372-a567-0e02b2c3d479` with your actual subscription ID
-2. Replace the VM Resource IDs with your actual test VM Resource IDs (see instructions below)
+1. Replace the subscription ID with your actual subscription ID
+2. Replace the VM Resource IDs with your actual test VM Resource IDs 
 3. Update VM names to match your actual test VMs
 
 **How to get your VM Resource IDs from Azure Portal:**
@@ -175,7 +175,7 @@ Set the application settings in your Function App:
 Otherwise, the Resource Graph queries will fail to find your VMs.
 
 ```
-let MockVMInfo = datatable( SubscriptionId: string, Resource: string, Computer: string, ResourceId: string ) [ 'YOUR-SUBSCRIPTION-ID', 'YOUR-VM-NAME-1', 'YOUR-VM-NAME-1', 'YOUR-ACTUAL-VM-RESOURCE-ID-1', 'YOUR-SUBSCRIPTION-ID', 'YOUR-VM-NAME-2', 'YOUR-VM-NAME-2', 'YOUR-ACTUAL-VM-RESOURCE-ID-2', 'YOUR-SUBSCRIPTION-ID', 'YOUR-VM-NAME-3', 'YOUR-VM-NAME-3', 'YOUR-ACTUAL-VM-RESOURCE-ID-3' ]; let MockPatchSummary = datatable( Computer: string, Computer1: string, LastUpdateApplied: datetime, OldestMissingSecurityUpdateInDays: int, WindowsUpdateSetting: string, OsVersion: string, CriticalUpdatesMissing: int, SecurityUpdatesMissing: int, OtherUpdatesMissing: int, TotalUpdatesMissing: int, RestartPending: bool ) [ 'YOUR-VM-NAME-1', 'YOUR-VM-NAME-1', datetime(2025-07-01 10:30:00), 5, 'Automatic', 'Windows Server 2022', 2, 3, 1, 6, true, 'YOUR-VM-NAME-2', 'YOUR-VM-NAME-2', datetime(2025-07-03 14:15:00), 3, 'Manual', 'Windows Server 2019', 1, 2, 0, 3, false, 'YOUR-VM-NAME-3', 'YOUR-VM-NAME-3', datetime(2025-07-05 09:45:00), 7, 'Automatic', 'Windows Server 2022', 0, 1, 2, 3, true ]; MockVMInfo | join kind=leftouter (MockPatchSummary) on Computer | project SubscriptionId, Resource, Computer, ResourceId, Computer1, LastUpdateApplied, OldestMissingSecurityUpdateInDays, WindowsUpdateSetting, OsVersion, CriticalUpdatesMissing, SecurityUpdatesMissing, OtherUpdatesMissing, TotalUpdatesMissing, RestartPending
+let MockVMInfo = datatable( SubscriptionId: string, Resource: string, Computer: string, ResourceId: string ) [ 'YOUR-SUBSCRIPTION-ID', 'webserver', 'webserver', '/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.Compute/virtualMachines/webserver', 'YOUR-SUBSCRIPTION-ID', 'databaseserver', 'databaseserver', '/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.Compute/virtualMachines/databaseserver', 'YOUR-SUBSCRIPTION-ID', 'middlewareserver', 'middlewareserver', '/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.Compute/virtualMachines/middlewareserver' ]; let MockPatchSummary = datatable( Computer: string, Computer1: string, LastUpdateApplied: datetime, OldestMissingSecurityUpdateInDays: int, WindowsUpdateSetting: string, OsVersion: string, CriticalUpdatesMissing: int, SecurityUpdatesMissing: int, OtherUpdatesMissing: int, TotalUpdatesMissing: int, RestartPending: bool ) [ 'webserver', 'webserver', datetime(2025-07-01 10:30:00), 5, 'Automatic', 'Windows Server 2022', 2, 3, 1, 6, true, 'databaseserver', 'databaseserver', datetime(2025-07-03 14:15:00), 3, 'Manual', 'Windows Server 2019', 1, 2, 0, 3, false, 'middlewareserver', 'middlewareserver', datetime(2025-07-05 09:45:00), 7, 'Automatic', 'Windows Server 2022', 0, 1, 2, 3, true ]; MockVMInfo | join kind=leftouter (MockPatchSummary) on Computer | project SubscriptionId, Resource, Computer, ResourceId, Computer1, LastUpdateApplied, OldestMissingSecurityUpdateInDays, WindowsUpdateSetting, OsVersion, CriticalUpdatesMissing, SecurityUpdatesMissing, OtherUpdatesMissing, TotalUpdatesMissing, RestartPending
 ```
 
 4. Click **Apply** to save all settings
@@ -249,14 +249,18 @@ Your KQL query **must** project the following fields in this exact order for the
 
 #### Production Query (customize based on your Update Management setup):
 
-**This is your REAL production query** - replace the mock query with something like this once testing is complete:
+**This is your REAL production query** - replace the mock query with this once testing is complete:
 
 ```kql
-UpdateSummary
-| where Classification == "Critical Updates" or Classification == "Security Updates" 
-| where UpdateState == "Needed" and Optional == false 
-| where RestartPending == true
-| project SubscriptionId, Resource, Computer, ResourceId, Computer, LastUpdateApplied, OldestMissingSecurityUpdateInDays, WindowsUpdateSetting, OsVersion, CriticalUpdatesMissing, SecurityUpdatesMissing, OtherUpdatesMissing, TotalUpdatesMissing, RestartPending
+let PatchSummary = UpdateSummary
+| summarize arg_max(TimeGenerated, *) by Computer;
+let VMInfo = Heartbeat
+| summarize arg_max(TimeGenerated, *) by Computer
+| project SubscriptionId, Resource, Computer, ResourceId;
+VMInfo
+| join kind=leftouter (PatchSummary) on Computer
+| where ComputerEnvironment !contains "non-Azure"
+| project SubscriptionId, Resource, Computer, ResourceId, Computer1, LastUpdateApplied, OldestMissingSecurityUpdateInDays, WindowsUpdateSetting, OsVersion, CriticalUpdatesMissing, SecurityUpdatesMissing, OtherUpdatesMissing, TotalUpdatesMissing, RestartPending
 ```
 
 **CRITICAL**: This query **MUST** project exactly these 14 fields in this exact order. The application code expects specific field positions and will fail if the order is different.
@@ -277,23 +281,23 @@ let MockVMInfo = datatable( SubscriptionId: string, Resource: string, Computer: 
     // SubscriptionId: Your Azure subscription ID
     // Resource & Computer: Your actual VM names  
     // ResourceId: Full resource ID from Azure Portal (VM → Properties → Resource ID)
-    'YOUR-SUBSCRIPTION-ID', 'YOUR-VM-NAME-1', 'YOUR-VM-NAME-1', 'YOUR-ACTUAL-VM-RESOURCE-ID-1',
-    'YOUR-SUBSCRIPTION-ID', 'YOUR-VM-NAME-2', 'YOUR-VM-NAME-2', 'YOUR-ACTUAL-VM-RESOURCE-ID-2',
-    'YOUR-SUBSCRIPTION-ID', 'YOUR-VM-NAME-3', 'YOUR-VM-NAME-3', 'YOUR-ACTUAL-VM-RESOURCE-ID-3'
+    'YOUR-SUBSCRIPTION-ID', 'webserver', 'webserver', '/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.Compute/virtualMachines/webserver',
+    'YOUR-SUBSCRIPTION-ID', 'databaseserver', 'databaseserver', '/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.Compute/virtualMachines/databaseserver',
+    'YOUR-SUBSCRIPTION-ID', 'middlewareserver', 'middlewareserver', '/subscriptions/YOUR-SUBSCRIPTION-ID/resourceGroups/YOUR-RG/providers/Microsoft.Compute/virtualMachines/middlewareserver'
 ]; 
 
 // Second datatable: Creates mock patch/update information
 let MockPatchSummary = datatable( Computer: string, Computer1: string, LastUpdateApplied: datetime, OldestMissingSecurityUpdateInDays: int, WindowsUpdateSetting: string, OsVersion: string, CriticalUpdatesMissing: int, SecurityUpdatesMissing: int, OtherUpdatesMissing: int, TotalUpdatesMissing: int, RestartPending: bool ) 
 [ 
     // 🔧 Update Computer names to match your VMs above
-    // VM 1 - HAS pending restart (RestartPending: true) - will send email
-    'YOUR-VM-NAME-1', 'YOUR-VM-NAME-1', datetime(2025-07-01 10:30:00), 5, 'Automatic', 'Windows Server 2022', 2, 3, 1, 6, true, 
+    // webserver - HAS pending restart (RestartPending: true) - will send email
+    'webserver', 'webserver', datetime(2025-07-01 10:30:00), 5, 'Automatic', 'Windows Server 2022', 2, 3, 1, 6, true, 
     
-    // VM 2 - NO pending restart (RestartPending: false) - will NOT send email
-    'YOUR-VM-NAME-2', 'YOUR-VM-NAME-2', datetime(2025-07-03 14:15:00), 3, 'Manual', 'Windows Server 2019', 1, 2, 0, 3, false, 
+    // databaseserver - NO pending restart (RestartPending: false) - will NOT send email
+    'databaseserver', 'databaseserver', datetime(2025-07-03 14:15:00), 3, 'Manual', 'Windows Server 2019', 1, 2, 0, 3, false, 
     
-    // VM 3 - HAS pending restart (RestartPending: true) - will send email
-    'YOUR-VM-NAME-3', 'YOUR-VM-NAME-3', datetime(2025-07-05 09:45:00), 7, 'Automatic', 'Windows Server 2022', 0, 1, 2, 3, true 
+    // middlewareserver - HAS pending restart (RestartPending: true) - will send email
+    'middlewareserver', 'middlewareserver', datetime(2025-07-05 09:45:00), 7, 'Automatic', 'Windows Server 2022', 0, 1, 2, 3, true 
 ]; 
 
 // Join the mock data and project the required 14 fields in EXACT order
@@ -304,31 +308,31 @@ MockVMInfo
 
 **Key points about this mock query:**
 
-1. **🔧 MUST REPLACE ALL PLACEHOLDER VALUES** with your actual Azure resources:
+1. **🔧 MUST REPLACE PLACEHOLDER VALUES** with your actual Azure resources:
    - **YOUR-SUBSCRIPTION-ID**: Replace with your Azure subscription ID (3 instances)
-   - **YOUR-VM-NAME-1/2/3**: Replace with your actual VM names (6 instances total)
-   - **YOUR-ACTUAL-VM-RESOURCE-ID-1/2/3**: Replace with full Resource IDs from Azure Portal (3 instances)
+   - **YOUR-RG**: Replace with your resource group name (3 instances)
+   - **webserver/databaseserver/middlewareserver**: Use your actual VM names or keep these example names
 
 2. **How to get VM Resource IDs from Azure Portal:**
    - Go to **Azure Portal** → **Virtual machines** → Select your VM
    - Go to **Settings** → **Properties**
    - Copy the full **Resource ID** (e.g., `/subscriptions/abc123.../resourceGroups/myRG/providers/Microsoft.Compute/virtualMachines/myVM`)
 
-3. **RestartPending Status**: VMs 1 and 3 have `RestartPending: true` (will send emails), VM 2 has `false` (no email)
+3. **RestartPending Status**: webserver and middlewareserver have `RestartPending: true` (will send emails), databaseserver has `false` (no email)
 4. **Field Order is CRITICAL**: The final `project` statement must maintain the exact 14-field order
 5. **VM Tags Required**: Ensure your actual VMs have `owner` and `contact` tags for emails to be sent
 
 **Steps to customize the mock query for testing:**
 1. **Get your Subscription ID**: Azure Portal → Subscriptions → copy the Subscription ID
 2. **Get VM Resource IDs**: For each test VM → Properties → copy Resource ID  
-3. **Replace placeholders**: Update all YOUR-SUBSCRIPTION-ID, YOUR-VM-NAME-X, and YOUR-ACTUAL-VM-RESOURCE-ID-X values
+3. **Replace placeholders**: Update YOUR-SUBSCRIPTION-ID and YOUR-RG values
 4. **Add required tags**: Ensure your VMs have `owner` and `contact` tags
 5. **Test the query**: Run it in Log Analytics to verify it returns 3 rows with 14 columns
 
 **Example of properly formatted values:**
-- SubscriptionId: `f47ac10b-58cc-4372-a567-0e02b2c3d479`
-- VM Name: `webserver01`
-- Resource ID: `/subscriptions/f47ac10b-58cc-4372-a567-0e02b2c3d479/resourceGroups/rg-production/providers/Microsoft.Compute/virtualMachines/webserver01`
+- SubscriptionId: `6e37307e-394c-478a-8404-4e441b3dfc1d`
+- VM Name: `webserver`
+- Resource ID: `/subscriptions/6e37307e-394c-478a-8404-4e441b3dfc1d/resourceGroups/rg-func-notification/providers/Microsoft.Compute/virtualMachines/webserver`
 
 **After testing, replace this entire mock query with a real query that reads from your UpdateSummary or Update tables in Log Analytics.**
 
